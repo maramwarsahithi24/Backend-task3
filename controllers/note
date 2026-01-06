@@ -1,0 +1,78 @@
+const NoteModel = require("../models/note");
+
+async function createNote(req, res){
+    try{
+        const {title, content, category} = req.body;
+        const newNote = await NoteModel.create({
+            title,
+            content,
+            category,
+            user: req.user.id,
+            isArchived: false
+        });
+        return res.redirect("/notes");
+    } catch(error){
+        console.log("error:",error);
+        return res.status(500).json({ msg: "Failed to create note" });
+    }
+}
+
+async function getMyNotes(req, res){
+    try{
+        const notes = await NoteModel.find({
+            user: req.user.id,
+            isArchived: false
+        });
+        return res.render("note", {notes});
+    } catch(error){
+        return res.status(500).json({ msg: "Failed to fetch notes"});
+    }
+}
+
+async function updateNote(req, res){
+    try{
+        const entry = await NoteModel.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id },
+            req.body,
+            { new: true}
+        );
+        if(!entry){
+            return res.status(404).json({ msg: "note not found"});
+        }
+        return res.redirect("/notes");
+    } catch(error){
+        return res.status(500).json({ msg: "Failed to update notes"});
+    }
+}
+
+async function archiveNote(req, res){
+    try{
+        const entry = await NoteModel.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id },
+            { isArchived: true },
+            { new: true }
+        );
+        if(!entry){
+            return res.status(404).json({msg: "note not found"});
+        }
+        return res.redirect("/notes");
+    } catch(error){
+        return res.status(500).json({ msg: "failed to archive note "});
+    }
+}
+
+async function getNotesWithUser(req, res){
+    try{
+        const notes = await NoteModel.find({
+            user: req.user.id,
+            isArchived: false
+        })
+        .populate("user", "username email");
+        return res.status(200).json(notes);
+    } catch(error){
+        console.log(error);
+        return res.status(500).json({ msg: "Populate failed" });
+    }
+}
+
+module.exports = { createNote, getMyNotes, updateNote, archiveNote, getNotesWithUser };
